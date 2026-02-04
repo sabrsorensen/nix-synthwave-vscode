@@ -37,13 +37,6 @@
 					];
 				};
 
-				# Vendor npm dependencies for reproducible builds
-				npmDeps = pkgs.fetchNpmDeps {
-				  name = "nix-synthwave-vscode-npm-deps";
-				  src = synthwave-vscode;
-				  hash = "sha256-0000000000000000000000000000000000000000000="; # <-- Update after running npm install in synthwave-vscode
-				};
-
 				# Extension metadata - read version from package.json
 				packageJson = builtins.fromJSON (builtins.readFile "${synthwave-vscode}/package.json");
 				extensionVersion = packageJson.version;
@@ -55,15 +48,6 @@
 						version = "${oldAttrs.version}-vsc-${extensionVersion}-sw84";
 
 						buildInputs = (oldAttrs.buildInputs or []) ++ [ pkgs.jq pkgs.openssl pkgs.patch ];
-
-						# Use vendored node_modules for reproducible builds
-						npmDeps = npmDeps;
-
-						preBuild = ''
-							if [ -d "$npmDeps" ]; then
-								cp -r $npmDeps node_modules
-							fi
-						'';
 
 						installPhase = (oldAttrs.installPhase or "") + (builtins.readFile (pkgs.replaceVars ./scripts/inject-theme.sh {
 								SYNTHWAVE_VSCODE = synthwave-vscode;
