@@ -42,7 +42,7 @@ Add to your `flake.nix`:
         modules = [
           {
             environment.systemPackages = [
-              nix-synthwave-vscode.packages.${system}.default
+              nix-synthwave-vscode.packages.${system}.vscode-synthwave84
             ];
           }
         ];
@@ -54,7 +54,7 @@ Add to your `flake.nix`:
         modules = [
           {
             home.packages = [
-              nix-synthwave-vscode.packages.${system}.vscode-synthwave-84
+              nix-synthwave-vscode.packages.${system}.vscode-synthwave84
             ];
           }
         ];
@@ -63,7 +63,7 @@ Add to your `flake.nix`:
       # Use in development shell
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = [
-          nix-synthwave-vscode.packages.${system}.default
+          nix-synthwave-vscode.packages.${system}.vscode-synthwave84
         ];
       };
     };
@@ -73,7 +73,7 @@ Add to your `flake.nix`:
 ### Available Packages
 
 - `default` - VS Code with Synthwave '84 theme baked-in
-- `vscode-synthwave-84` - Descriptive alias for `default`
+- `vscode-synthwave84` - Descriptive alias for `default`
 
 ### Development
 
