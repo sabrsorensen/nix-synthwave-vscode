@@ -26,6 +26,16 @@
 				};
 				pkgs = pkgsAllowUnfree;
 
+				renderTemplate =
+					template: vars:
+					let
+						names = builtins.attrNames vars;
+					in
+					pkgs.lib.replaceStrings
+						(map (name: "@${name}@") names)
+						(map (name: builtins.toString vars.${name}) names)
+						(builtins.readFile template);
+
 				# Only include files needed for the build — excludes .git, build artifacts, etc.
 				src = pkgs.lib.fileset.toSource {
 					root = ./.;
@@ -41,20 +51,21 @@
 				packageJson = builtins.fromJSON (builtins.readFile "${synthwave-vscode}/package.json");
 				extensionVersion = packageJson.version;
 
-				# Pre-patched VS Code with Synthwave '84 theme built-in
-				synthwave-vscode-baked = pkgs.vscode.overrideAttrs (oldAttrs: {
-						pname = "vscode-synthwave84";
+				mkBakedEditor =
+					basePackage: productName: versionTag:
+					basePackage.overrideAttrs (oldAttrs: {
+						pname = "${productName}-synthwave84";
 						__intentionallyOverridingVersion = true;
-						version = "${oldAttrs.version}-vsc-${extensionVersion}-sw84";
+						version = "${oldAttrs.version}-${versionTag}-${extensionVersion}-sw84";
 
-						buildInputs = (oldAttrs.buildInputs or []) ++ [ pkgs.jq pkgs.openssl pkgs.patch ];
+						buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ pkgs.jq pkgs.openssl pkgs.patch ];
 
-						installPhase = (oldAttrs.installPhase or "") + (builtins.readFile (pkgs.replaceVars ./scripts/inject-theme.sh {
+						installPhase = (oldAttrs.installPhase or "") + (renderTemplate ./scripts/inject-theme.sh {
 								SYNTHWAVE_VSCODE = synthwave-vscode;
 								PATCHES_DIR = "${self}/patches";
 								PATCH_BIN = "${pkgs.patch}/bin/patch";
 								JQ_BIN = "${pkgs.jq}/bin/jq";
-						}));
+						});
 
 
 					# Fix wrapGAppsHook unbound variable bug - initialize to empty so hook can run normally
@@ -64,16 +75,21 @@
 				'' + (oldAttrs.preFixup or "");
 
 					# Recalculate checksums in postFixup
-				postFixup = (oldAttrs.postFixup or "") + (builtins.readFile (pkgs.replaceVars ./scripts/update-checksums.sh {
+				postFixup = (oldAttrs.postFixup or "") + (renderTemplate ./scripts/update-checksums.sh {
 						JQ_BIN = "${pkgs.jq}/bin/jq";
 						OPENSSL_BIN = "${pkgs.openssl}/bin/openssl";
-					}));
+					});
 				});
+
+				# Pre-patched editors with Synthwave '84 theme built-in
+				synthwave-vscode-baked = mkBakedEditor pkgs.vscode "vscode" "vsc";
+				synthwave-vscodium-baked = mkBakedEditor pkgs.vscodium "vscodium" "codium";
 
 			in {
 				packages = {
 					default = synthwave-vscode-baked;
 					vscode-synthwave84 = synthwave-vscode-baked;
+					vscodium-synthwave84 = synthwave-vscodium-baked;
 				};
 
         devShells.default =
@@ -88,6 +104,14 @@
 						program = "${synthwave-vscode-baked}/bin/code";
 						meta = {
 							description = "Launch VS Code with Synthwave '84 theme baked-in";
+							license = nixpkgs.lib.licenses.mit;
+						};
+					};
+					vscodium = {
+						type = "app";
+						program = "${synthwave-vscodium-baked}/bin/codium";
+						meta = {
+							description = "Launch VSCodium with Synthwave '84 theme baked-in";
 							license = nixpkgs.lib.licenses.mit;
 						};
 					};
